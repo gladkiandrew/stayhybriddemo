@@ -406,7 +406,15 @@ export default function UploadExercise({ editId, initialData, onSaved }: Props) 
     if (!editId) {
       try {
         const saved = localStorage.getItem(DRAFT_KEY);
-        if (saved) return { ...BLANK, ...JSON.parse(saved) };
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const validKeys = Object.keys(BLANK) as (keyof FormState)[];
+          const clean = validKeys.reduce((acc, k) => {
+            if (k in parsed) acc[k] = parsed[k] as any;
+            return acc;
+          }, { ...BLANK });
+          return clean;
+        }
       } catch {}
     }
     return BLANK;
@@ -503,7 +511,9 @@ export default function UploadExercise({ editId, initialData, onSaved }: Props) 
         return;
       }
 
-      const payload = { ...form, status, short_video_url, tutorial_video_url, coach_id: resolvedCoachId };
+      const ALLOWED_KEYS = new Set([...Object.keys(BLANK), 'coach_id']);
+      const rawPayload = { ...form, status, short_video_url, tutorial_video_url, coach_id: resolvedCoachId };
+      const payload = Object.fromEntries(Object.entries(rawPayload).filter(([k]) => ALLOWED_KEYS.has(k)));
 
       console.log('Full exercise payload:', JSON.stringify(payload, null, 2));
 
