@@ -505,18 +505,14 @@ export default function UploadExercise({ editId, initialData, onSaved }: Props) 
 
       const payload = { ...form, status, short_video_url, tutorial_video_url, coach_id: resolvedCoachId };
 
-      console.log('User ID:', user?.id);
-      console.log('Coach ID being used:', resolvedCoachId || coachId);
-      console.log('Full payload:', payload);
+      console.log('Full exercise payload:', JSON.stringify(payload, null, 2));
 
       const { data, error } = editId
         ? await supabase.from('exercises').update(payload).eq('id', editId).select()
         : await supabase.from('exercises').insert(payload).select();
 
-      console.log('Insert result:', data);
-      console.log('Insert error:', error);
-
       if (error) {
+        console.error('Supabase insert error:', error.message, error.details, error.hint);
         showToast(error.message, 'error');
       } else {
         // Clear draft
