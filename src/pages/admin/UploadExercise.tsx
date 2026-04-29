@@ -6,21 +6,13 @@ import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/Toast';
 import CategoryBadge, { CATEGORY_COLORS } from '../../components/CategoryBadge';
 import { Bookmark, Plus, Bot, BadgeCheck, Play } from 'lucide-react';
+import { CATEGORIES, DIFFICULTIES, MUSCLE_GROUPS, DIFFICULTY_COLORS } from '../../constants/exercise';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['Speed', 'Strength', 'Power', 'Stability', 'Mobility', 'Swimming', 'Cycling', 'Running'];
-const DIFFICULTIES = ['Beginner', 'Intermediate', 'Advanced', 'Elite'];
-const MUSCLE_GROUPS = ['Legs', 'Glutes', 'Core', 'Back', 'Chest', 'Shoulders', 'Arms', 'Full Body'];
 const EQUIPMENT_OPTIONS = ['No Equipment', 'Barbell', 'Dumbbell', 'Kettlebell', 'Cable', 'Machine', 'Band', 'Box', 'Sled', 'Pool', 'Bike', 'Track'];
 const VISIBILITY_OPTIONS: ('free' | 'pro' | 'elite')[] = ['free', 'pro', 'elite'];
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  Beginner: '#3ECF8E',
-  Intermediate: '#00D4FF',
-  Advanced: '#FFB800',
-  Elite: '#FF3C00',
-};
+const DARK_TEXT_CATEGORIES = new Set(['Strength', 'Power', 'Stability', 'Swimming', 'Cycling']);
 
 const DRAFT_KEY = 'stayhybrid_upload_draft';
 
@@ -63,6 +55,8 @@ const BLANK: FormState = {
   short_video_url: '',
   tutorial_video_url: '',
 };
+
+const ALLOWED_PAYLOAD_KEYS = new Set([...Object.keys(BLANK), 'coach_id']);
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -367,6 +361,19 @@ function SectionHeader({ number, title }: { number: string; title: string }) {
   );
 }
 
+// ─── Hooks ────────────────────────────────────────────────────────────────────
+
+function useObjectUrl(file: File | null): string {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    if (!file) { setUrl(''); return; }
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+  return url;
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function UploadExercise({ editId, initialData, onSaved }: Props) {
@@ -381,39 +388,21 @@ export default function UploadExercise({ editId, initialData, onSaved }: Props) 
   useEffect(() => {
     if (!user) { setCoachLoading(false); return; }
     (async () => {
-      if (role === 'admin') {
-        const { data: coachData } = await supabase.from('coaches').select('id').eq('user_id', user.id).maybeSingle();
-        if (coachData) setCoachId(coachData.id);
-        setIsCreator(true);
-        setCoachLoading(false);
-        return;
-      }
-      const { data: coachData, error: coachError } = await supabase.from('coaches').select('id').eq('user_id', user.id).maybeSingle();
-      if (coachError || !coachData) {
-        setIsCreator(false);
-        setCoachLoading(false);
-        return;
-      }
-      setCoachId(coachData.id);
-      setIsCreator(true);
+      const { data: coachData } = await supabase.from('coaches').select('id').eq('user_id', user.id).maybeSingle();
+      if (coachData) setCoachId(coachData.id);
+      setIsCreator(role === 'admin' || !!coachData);
       setCoachLoading(false);
     })();
   }, [user, role]);
 
   const [form, setForm] = useState<FormState>(() => {
     if (initialData) return { ...BLANK, ...initialData };
-    // Load draft from localStorage if no editId
     if (!editId) {
       try {
         const saved = localStorage.getItem(DRAFT_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
-          const validKeys = Object.keys(BLANK) as (keyof FormState)[];
-          const clean = validKeys.reduce((acc, k) => {
-            if (k in parsed) acc[k] = parsed[k] as any;
-            return acc;
-          }, { ...BLANK });
-          return clean;
+          return { ...BLANK, ...Object.fromEntries(Object.entries(parsed).filter(([k]) => k in BLANK)) } as FormState;
         }
       } catch {}
     }
@@ -423,42 +412,22 @@ export default function UploadExercise({ editId, initialData, onSaved }: Props) 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [shortFile, setShortFile] = useState<File | null>(null);
   const [tutFile, setTutFile] = useState<File | null>(null);
-  const [shortPreviewUrl, setShortPreviewUrl] = useState('');
-  const [tutPreviewUrl, setTutPreviewUrl] = useState('');
+  const shortPreviewUrl = useObjectUrl(shortFile);
+  const tutPreviewUrl = useObjectUrl(tutFile);
   const [shortProgress, setShortProgress] = useState(0);
   const [tutProgress, setTutProgress] = useState(0);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Handle file selection and create object URLs
-  useEffect(() => {
-    if (shortFile) {
-      const url = URL.createObjectURL(shortFile);
-      setShortPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else {
-      setShortPreviewUrl('');
-    }
-  }, [shortFile]);
-
-  useEffect(() => {
-    if (tutFile) {
-      const url = URL.createObjectURL(tutFile);
-      setTutPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else {
-      setTutPreviewUrl('');
-    }
-  }, [tutFile]);
-
-  // Auto-save draft every 30s (only for new uploads)
+  const formRef = useRef(form);
+  useEffect(() => { formRef.current = form; }, [form]);
   useEffect(() => {
     if (editId) return;
     const interval = setInterval(() => {
-      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(form)); } catch {}
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(formRef.current)); } catch {}
     }, 30000);
     return () => clearInterval(interval);
-  }, [form, editId]);
+  }, [editId]);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((p) => ({ ...p, [key]: value }));
@@ -494,38 +463,27 @@ export default function UploadExercise({ editId, initialData, onSaved }: Props) 
     if (status === 'published' && !validate()) return;
     setSaving(true);
     try {
-      let short_video_url = form.short_video_url;
-      let tutorial_video_url = form.tutorial_video_url;
+      const [short_video_url, tutorial_video_url] = await Promise.all([
+        shortFile ? uploadVideo(shortFile, 'demos', setShortProgress) : Promise.resolve(form.short_video_url),
+        tutFile ? uploadVideo(tutFile, 'tutorials', setTutProgress) : Promise.resolve(form.tutorial_video_url),
+      ]);
 
-      if (shortFile) short_video_url = await uploadVideo(shortFile, 'demos', setShortProgress);
-      if (tutFile) tutorial_video_url = await uploadVideo(tutFile, 'tutorials', setTutProgress);
-
-      let resolvedCoachId = coachId;
-      if (!resolvedCoachId) {
-        const { data: coachData } = await supabase.from('coaches').select('id').eq('user_id', user!.id).maybeSingle();
-        resolvedCoachId = coachData?.id ?? null;
-      }
-      if (!resolvedCoachId) {
+      if (!coachId) {
         showToast('Coach profile not found. Contact support.', 'error');
         setSaving(false);
         return;
       }
 
-      const ALLOWED_KEYS = new Set([...Object.keys(BLANK), 'coach_id']);
-      const rawPayload = { ...form, status, short_video_url, tutorial_video_url, coach_id: resolvedCoachId };
-      const payload = Object.fromEntries(Object.entries(rawPayload).filter(([k]) => ALLOWED_KEYS.has(k)));
+      const rawPayload = { ...form, status, short_video_url, tutorial_video_url, coach_id: coachId };
+      const payload = Object.fromEntries(Object.entries(rawPayload).filter(([k]) => ALLOWED_PAYLOAD_KEYS.has(k)));
 
-      console.log('Full exercise payload:', JSON.stringify(payload, null, 2));
-
-      const { data, error } = editId
+      const { error } = editId
         ? await supabase.from('exercises').update(payload).eq('id', editId).select()
         : await supabase.from('exercises').insert(payload).select();
 
       if (error) {
-        console.error('Supabase insert error:', error.message, error.details, error.hint);
         showToast(error.message, 'error');
       } else {
-        // Clear draft
         try { localStorage.removeItem(DRAFT_KEY); } catch {}
         setSuccess(true);
         onSaved?.();
@@ -691,7 +649,7 @@ export default function UploadExercise({ editId, initialData, onSaved }: Props) 
                         style={{
                           background: active ? color : 'transparent',
                           border: `1px solid ${active ? color : 'var(--border)'}`,
-                          color: active ? (cat === 'Strength' || cat === 'Power' || cat === 'Stability' || cat === 'Swimming' || cat === 'Cycling' ? '#000' : '#fff') : 'var(--text-secondary)',
+                          color: active ? (DARK_TEXT_CATEGORIES.has(cat) ? '#000' : '#fff') : 'var(--text-secondary)',
                           fontFamily: "'Bebas Neue', sans-serif",
                           letterSpacing: '0.06em',
                         }}

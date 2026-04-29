@@ -4,6 +4,7 @@ import { supabase, Exercise } from '../../lib/supabase';
 import CategoryBadge from '../../components/CategoryBadge';
 import { useToast } from '../../components/Toast';
 import UploadExercise from './UploadExercise';
+import { CATEGORIES, MUSCLE_GROUPS, DIFFICULTIES, DIFFICULTY_COLORS } from '../../constants/exercise';
 
 const PAGE_SIZE = 20;
 
@@ -12,17 +13,6 @@ const VISIBILITY_COLORS: Record<string, string> = {
   pro: '#00D4FF',
   elite: '#FFB800',
 };
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  Beginner: '#3ECF8E',
-  Intermediate: '#00D4FF',
-  Advanced: '#FFB800',
-  Elite: '#FF3C00',
-};
-
-const CATEGORIES = ['Speed', 'Strength', 'Power', 'Stability', 'Mobility', 'Swimming', 'Cycling', 'Running'];
-const MUSCLE_GROUPS = ['Legs', 'Glutes', 'Core', 'Back', 'Chest', 'Shoulders', 'Arms', 'Full Body'];
-const DIFFICULTIES = ['Beginner', 'Intermediate', 'Advanced', 'Elite'];
 
 export default function ManageExercises() {
   const { showToast } = useToast();

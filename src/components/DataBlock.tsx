@@ -5,13 +5,7 @@ import CategoryBadge, { CATEGORY_COLORS } from './CategoryBadge';
 import CoachTag from './CoachTag';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  Beginner: '#3ECF8E',
-  Intermediate: '#00D4FF',
-  Advanced: '#FFB800',
-  Elite: '#FF3C00',
-};
+import { DIFFICULTY_COLORS } from '../constants/exercise';
 
 function VideoArea({ url, title, category }: { url: string; title: string; category: string[] }) {
   const [hovered, setHovered] = useState(false);

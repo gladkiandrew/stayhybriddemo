@@ -1,8 +1,9 @@
 import { Search, ChevronDown } from 'lucide-react';
 import { CATEGORY_COLORS } from './CategoryBadge';
+import { CATEGORIES as BASE_CATEGORIES, MUSCLE_GROUPS as BASE_MUSCLE_GROUPS } from '../constants/exercise';
 
-const CATEGORIES = ['All', 'Speed', 'Strength', 'Power', 'Stability', 'Mobility', 'Swimming', 'Cycling', 'Running'];
-const MUSCLE_GROUPS = ['All', 'Legs', 'Glutes', 'Core', 'Back', 'Chest', 'Shoulders', 'Arms', 'Full Body'];
+const CATEGORIES = ['All', ...BASE_CATEGORIES];
+const MUSCLE_GROUPS = ['All', ...BASE_MUSCLE_GROUPS];
 
 type Props = {
   activeCategory: string;
