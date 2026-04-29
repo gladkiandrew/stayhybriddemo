@@ -1,0 +1,426 @@
+import { useState, useEffect, useRef } from "react";
+import {
+  Zap, Database, GitBranch, Globe, CreditCard, Brain,
+  Layers, BookOpen, Users, Calendar, BarChart3, Shield,
+  ArrowRight, ChevronRight, Activity, Cpu, Server,
+  Code2, Palette, Rocket, Lock, Wifi, RefreshCw, Star
+} from "lucide-react";
+
+const tools = [
+  {
+    id: "bolt",
+    name: "Bolt.new",
+    category: "build",
+    status: "active",
+    icon: Code2,
+    color: "#C8FF00",
+    role: "Where you build",
+    description: "You write prompts, Bolt writes production React code. Every page, DataBlock, filter, and component — no local install. Your AI developer.",
+    jobs: ["React frontend generation", "Live preview", "GitHub push integration", "Component-level iteration"],
+    phase: "Now",
+    phaseColor: "#C8FF00",
+  },
+  {
+    id: "react",
+    name: "React + Vite",
+    category: "build",
+    status: "auto",
+    icon: Layers,
+    color: "#61DAFB",
+    role: "The UI engine",
+    description: "Bolt writes React. Vite bundles it. You never touch either directly — but knowing they exist explains why Bolt produces .jsx files and why your app loads fast.",
+    jobs: ["Component-based UI", "State management", "Fast hot-reload dev", "Production bundling"],
+    phase: "Automatic",
+    phaseColor: "#888",
+  },
+  {
+    id: "supabase",
+    name: "Supabase",
+    category: "data",
+    status: "active",
+    icon: Database,
+    color: "#3ECF8E",
+    role: "Your entire backend",
+    description: "Replaces thousands of lines of server code. Database, auth, file storage, and a real-time auto API — all in one. Bolt talks to it directly with two lines of code.",
+    jobs: ["Exercise + coach database", "User auth & sessions", "Video file storage", "Real-time sync", "Auto-generated REST API", "Row-level security"],
+    phase: "Now",
+    phaseColor: "#C8FF00",
+  },
+  {
+    id: "github",
+    name: "GitHub",
+    category: "deploy",
+    status: "soon",
+    icon: GitBranch,
+    color: "#E6EDF3",
+    role: "Code safety net",
+    description: "Every Bolt push creates a snapshot. If something breaks, roll back instantly. Also the bridge between Bolt and Vercel — push code, site updates automatically.",
+    jobs: ["Version history", "Bolt → Vercel bridge", "Rollback on breaks", "Team code review"],
+    phase: "Before launch",
+    phaseColor: "#FFB800",
+  },
+  {
+    id: "vercel",
+    name: "Vercel",
+    category: "deploy",
+    status: "soon",
+    icon: Globe,
+    color: "#fff",
+    role: "Live on the internet",
+    description: "What makes StayHybrid.com real. Auto-deploys every GitHub push. Handles your custom domain, SSL certificate, and global edge delivery — free at your scale.",
+    jobs: ["Auto-deploy on push", "Custom domain + SSL", "Global edge network", "Preview deployments"],
+    phase: "Before launch",
+    phaseColor: "#FFB800",
+  },
+  {
+    id: "stripe",
+    name: "Stripe",
+    category: "money",
+    status: "soon",
+    icon: CreditCard,
+    color: "#635BFF",
+    role: "Every dollar you make",
+    description: "Pro + Elite subscriptions, paid challenges, future B2B — all through Stripe. Auto-updates user tiers in Supabase on payment. Self-serve billing portal built in.",
+    jobs: ["Subscription billing", "Tier gating (Free/Pro/Elite)", "Challenge purchases", "Automatic receipts", "Failed payment recovery"],
+    phase: "Before monetizing",
+    phaseColor: "#FFB800",
+  },
+  {
+    id: "claude-api",
+    name: "Claude API",
+    category: "ai",
+    status: "phase2",
+    icon: Brain,
+    color: "#CC785C",
+    role: "MyHybrid's brain",
+    description: "Send it Mit's training philosophy, the exercise database, and an athlete's goals + wearable data — it generates a personalized, periodized plan. Every agent runs on this.",
+    jobs: ["MyHybrid plan generation", "Adaptive training logic", "Content scheduling agent", "Team management agent", "Data optimization agent"],
+    phase: "Phase 2",
+    phaseColor: "#FF3C00",
+  },
+  {
+    id: "notion",
+    name: "Notion",
+    category: "ops",
+    status: "active",
+    icon: BookOpen,
+    color: "#fff",
+    role: "Team operating system",
+    description: "Where you and Mit run the business. Roadmap, sprint board, meeting notes, feature specs. Connected via MCP so Claude reads and writes to it directly.",
+    jobs: ["Roadmap + sprint board", "Meeting transcripts", "Feature specs", "Exercise DB planning", "MCP integration"],
+    phase: "Now",
+    phaseColor: "#C8FF00",
+  },
+  {
+    id: "cloudflare",
+    name: "Cloudflare",
+    category: "infra",
+    status: "optional",
+    icon: Shield,
+    color: "#F48120",
+    role: "Scale-up layer",
+    description: "Sits in front of Vercel when you have real traffic. Global CDN caching, DDoS protection, DNS management. Vercel already handles basics — add this at scale.",
+    jobs: ["Global CDN", "DDoS protection", "DNS management", "Rate limiting"],
+    phase: "Later",
+    phaseColor: "#555",
+  },
+];
+
+const agents = [
+  { name: "MyHybrid", icon: Brain, desc: "Generates + adapts personalized training plans from the database", color: "#C8FF00" },
+  { name: "Content Scheduler", icon: Calendar, desc: "Posts Mit's content automatically across platforms on a set cadence", color: "#FF3C00" },
+  { name: "Team Manager", icon: Users, desc: "Handles coach permissions, athlete assignments, tier access", color: "#635BFF" },
+  { name: "Data Optimizer", icon: BarChart3, desc: "Weekly DB cleanup, surfaces trending exercises, flags gaps", color: "#3ECF8E" },
+];
+
+const phases = [
+  { label: "Phase 1 — Demo", color: "#C8FF00", items: ["Bolt.new", "Supabase", "Exercise DB", "DataBlock UX", "Admin upload"] },
+  { label: "Phase 2 — Launch", color: "#FFB800", items: ["GitHub", "Vercel", "Stripe", "Auth gates", "7-day trial"] },
+  { label: "Phase 3 — Intelligence", color: "#FF3C00", items: ["Claude API", "MyHybrid", "WHOOP sync", "Agents", "Cloudflare"] },
+];
+
+const categoryMeta = {
+  build:  { label: "Build", color: "#C8FF00" },
+  data:   { label: "Data", color: "#3ECF8E" },
+  deploy: { label: "Deploy", color: "#FFB800" },
+  money:  { label: "Money", color: "#635BFF" },
+  ai:     { label: "AI", color: "#FF3C00" },
+  ops:    { label: "Ops", color: "#888" },
+  infra:  { label: "Infra", color: "#F48120" },
+};
+
+export default function StayHybridOS() {
+  const [active, setActive] = useState(tools[0]);
+  const [tab, setTab] = useState("stack");
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 2000);
+    return () => clearInterval(t);
+  }, []);
+
+  const pulseTools = ["bolt", "supabase", "notion"];
+  const isPulsing = (id) => pulseTools.includes(id) && tick % 3 === pulseTools.indexOf(id);
+
+  return (
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: "#0A0A0A", minHeight: "100vh", color: "#fff", padding: "0" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+      <style>{`
+        @keyframes pulse-ring { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(1.8);opacity:0} }
+        @keyframes slide-in { from{opacity:0;transform:translateX(12px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes fade-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .pulse-ring { animation: pulse-ring 1.2s ease-out infinite; }
+        .slide-in { animation: slide-in 0.22s ease-out forwards; }
+        .fade-up { animation: fade-up 0.3s ease-out forwards; }
+        .tool-btn:hover { background: #1a1a1a !important; }
+        .tab-btn { cursor:pointer; background:none; border:none; color:#555; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; padding:8px 16px; border-radius:6px; transition:all 0.15s; }
+        .tab-btn.active { background:#1a1a1a; color:#fff; }
+        .tab-btn:hover { color:#aaa; }
+        .phase-pill { font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ borderBottom: "1px solid #1a1a1a", padding: "20px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <Zap size={20} color="#C8FF00" fill="#C8FF00" />
+          </div>
+          <span style={{ fontFamily: "'Bebas Neue'", fontSize: 22, letterSpacing: 2, color: "#fff" }}>STAY</span>
+          <span style={{ fontFamily: "'Bebas Neue'", fontSize: 22, letterSpacing: 2, color: "#C8FF00" }}>HYBRID</span>
+          <span style={{ fontSize: 11, color: "#333", marginLeft: 8, fontWeight: 500, letterSpacing: 1, textTransform: "uppercase" }}>OS</span>
+        </div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {["stack", "agents", "phases"].map(t => (
+            <button key={t} className={`tab-btn ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "stack" && (
+        <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", minHeight: "calc(100vh - 65px)" }}>
+          {/* Left: tool list */}
+          <div style={{ borderRight: "1px solid #1a1a1a", padding: "16px 0", overflowY: "auto" }}>
+            {Object.entries(categoryMeta).map(([cat, meta]) => {
+              const catTools = tools.filter(t => t.category === cat);
+              if (!catTools.length) return null;
+              return (
+                <div key={cat} style={{ marginBottom: 4 }}>
+                  <div style={{ padding: "8px 20px 4px", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", color: meta.color, textTransform: "uppercase", opacity: 0.7 }}>
+                    {meta.label}
+                  </div>
+                  {catTools.map(tool => {
+                    const Icon = tool.icon;
+                    const isActive = active.id === tool.id;
+                    const pulsing = isPulsing(tool.id);
+                    return (
+                      <button
+                        key={tool.id}
+                        className="tool-btn"
+                        onClick={() => setActive(tool)}
+                        style={{
+                          width: "100%", display: "flex", alignItems: "center", gap: 12,
+                          padding: "10px 20px", background: isActive ? "#161616" : "transparent",
+                          border: "none", cursor: "pointer", borderLeft: isActive ? `2px solid ${tool.color}` : "2px solid transparent",
+                          transition: "all 0.15s", textAlign: "left",
+                        }}
+                      >
+                        <div style={{ position: "relative", flexShrink: 0 }}>
+                          {pulsing && (
+                            <div className="pulse-ring" style={{
+                              position: "absolute", inset: -3, borderRadius: "50%",
+                              border: `1.5px solid ${tool.color}`, pointerEvents: "none"
+                            }} />
+                          )}
+                          <div style={{
+                            width: 32, height: 32, borderRadius: 8,
+                            background: isActive ? `${tool.color}18` : "#151515",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            border: `1px solid ${isActive ? tool.color + "40" : "#222"}`
+                          }}>
+                            <Icon size={15} color={isActive ? tool.color : "#555"} />
+                          </div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: isActive ? "#fff" : "#888", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {tool.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#444", marginTop: 1 }}>{tool.role}</div>
+                        </div>
+                        <span className="phase-pill" style={{ background: tool.phaseColor + "18", color: tool.phaseColor, flexShrink: 0 }}>
+                          {tool.phase}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right: detail panel */}
+          <div key={active.id} className="slide-in" style={{ padding: "40px 48px", overflowY: "auto" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: 14,
+                  background: `${active.color}15`,
+                  border: `1.5px solid ${active.color}35`,
+                  display: "flex", alignItems: "center", justifyContent: "center"
+                }}>
+                  <active.icon size={26} color={active.color} />
+                </div>
+                <div>
+                  <h1 style={{ fontFamily: "'Bebas Neue'", fontSize: 36, letterSpacing: 2, margin: 0, color: "#fff" }}>{active.name}</h1>
+                  <p style={{ margin: 0, fontSize: 13, color: "#555", marginTop: 2 }}>{active.role}</p>
+                </div>
+              </div>
+              <span className="phase-pill" style={{ background: active.phaseColor + "20", color: active.phaseColor, fontSize: 12, padding: "5px 14px" }}>
+                {active.phase}
+              </span>
+            </div>
+
+            <p style={{ fontSize: 16, lineHeight: 1.75, color: "#aaa", maxWidth: 600, marginBottom: 40 }}>
+              {active.description}
+            </p>
+
+            <div style={{ marginBottom: 40 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "#444", textTransform: "uppercase", marginBottom: 14 }}>
+                What it handles
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {active.jobs.map(job => (
+                  <div key={job} style={{
+                    padding: "6px 14px", borderRadius: 8,
+                    background: "#161616", border: "1px solid #242424",
+                    fontSize: 13, color: "#ccc",
+                    display: "flex", alignItems: "center", gap: 6
+                  }}>
+                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: active.color, flexShrink: 0 }} />
+                    {job}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Connection map */}
+            <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 12, padding: 24 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "#444", textTransform: "uppercase", marginBottom: 16 }}>
+                Connects to
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {tools
+                  .filter(t => t.id !== active.id)
+                  .slice(0, 5)
+                  .map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => setActive(t)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 8,
+                        padding: "8px 14px", borderRadius: 8,
+                        background: "#161616", border: "1px solid #242424",
+                        cursor: "pointer", color: "#888", fontSize: 12,
+                        transition: "all 0.15s", fontFamily: "'DM Sans', sans-serif"
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = t.color + "50"; e.currentTarget.style.color = "#fff"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#242424"; e.currentTarget.style.color = "#888"; }}
+                    >
+                      <t.icon size={13} color={t.color} />
+                      {t.name}
+                      <ArrowRight size={11} />
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "agents" && (
+        <div style={{ padding: "48px 48px", maxWidth: 900 }}>
+          <div style={{ marginBottom: 40 }}>
+            <h2 style={{ fontFamily: "'Bebas Neue'", fontSize: 42, letterSpacing: 3, margin: "0 0 8px", color: "#fff" }}>AI AGENTS</h2>
+            <p style={{ color: "#555", fontSize: 14, margin: 0 }}>Four Claude-powered agents that make your operations run themselves.</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 48 }}>
+            {agents.map((agent, i) => (
+              <div key={agent.name} className="fade-up" style={{
+                background: "#111", border: "1px solid #1e1e1e", borderRadius: 14,
+                padding: "28px 28px", animationDelay: `${i * 0.07}s`, opacity: 0
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 10,
+                    background: agent.color + "18", border: `1px solid ${agent.color}30`,
+                    display: "flex", alignItems: "center", justifyContent: "center"
+                  }}>
+                    <agent.icon size={20} color={agent.color} />
+                  </div>
+                  <h3 style={{ fontFamily: "'Bebas Neue'", fontSize: 22, letterSpacing: 1.5, margin: 0, color: "#fff" }}>{agent.name}</h3>
+                </div>
+                <p style={{ fontSize: 14, color: "#666", lineHeight: 1.65, margin: 0 }}>{agent.desc}</p>
+                <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 8 }}>
+                  <Brain size={12} color={agent.color} />
+                  <span style={{ fontSize: 11, color: "#444" }}>Powered by Claude API + Supabase</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ background: "#111", border: "1px solid #1e1e1e", borderRadius: 14, padding: "28px 32px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <Cpu size={16} color="#C8FF00" />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "#C8FF00", letterSpacing: "0.06em", textTransform: "uppercase" }}>How agents are built</span>
+            </div>
+            <p style={{ fontSize: 14, color: "#666", lineHeight: 1.7, margin: 0 }}>
+              Each agent is a Claude API call with a carefully engineered system prompt. The prompt contains Mit's training philosophy, the relevant exercise data pulled from Supabase, and the athlete's context (goals, wearable data, history). Claude reasons over this and returns a structured plan. The plan writes back to Supabase. The athlete's UI updates in real-time. No separate AI infrastructure needed — just the Claude API and the database you're already building.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {tab === "phases" && (
+        <div style={{ padding: "48px 48px", maxWidth: 860 }}>
+          <div style={{ marginBottom: 40 }}>
+            <h2 style={{ fontFamily: "'Bebas Neue'", fontSize: 42, letterSpacing: 3, margin: "0 0 8px", color: "#fff" }}>BUILD PHASES</h2>
+            <p style={{ color: "#555", fontSize: 14, margin: 0 }}>Three phases from zero to full performance OS.</p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {phases.map((phase, i) => (
+              <div key={phase.label} className="fade-up" style={{
+                background: "#111", border: `1px solid ${phase.color}25`,
+                borderRadius: 14, padding: "28px 32px",
+                animationDelay: `${i * 0.1}s`, opacity: 0
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: phase.color }} />
+                  <h3 style={{ fontFamily: "'Bebas Neue'", fontSize: 24, letterSpacing: 2, margin: 0, color: phase.color }}>{phase.label}</h3>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {phase.items.map((item, j) => (
+                    <div key={item} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{
+                        padding: "5px 14px", borderRadius: 8,
+                        background: phase.color + "12",
+                        border: `1px solid ${phase.color}25`,
+                        fontSize: 13, color: "#ccc"
+                      }}>{item}</span>
+                      {j < phase.items.length - 1 && <ChevronRight size={14} color="#333" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 32, padding: "20px 28px", background: "#111", border: "1px solid #1e1e1e", borderRadius: 12, display: "flex", alignItems: "center", gap: 12 }}>
+            <Activity size={16} color="#C8FF00" />
+            <span style={{ fontSize: 13, color: "#666" }}>
+              Phase 1 is active. GitHub + Vercel connect to the demo before it goes public. Stripe and Claude API unlock at Phase 2.
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
