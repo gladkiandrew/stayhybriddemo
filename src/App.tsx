@@ -12,6 +12,7 @@ import Dashboard from './pages/admin/Dashboard';
 import UploadExercise from './pages/admin/UploadExercise';
 import ManageExercises from './pages/admin/ManageExercises';
 import Creators from './pages/admin/Creators';
+import AcceptInvite from './pages/AcceptInvite';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/saves" element={<Saves />} />
             <Route path="/join" element={<Join />} />
+            <Route path="/invite/:token" element={<AcceptInvite />} />
             <Route path="/creators" element={<CreatorsBrowse />} />
             <Route path="/profile/:id" element={<ProfilePage />} />
             <Route path="/admin" element={<Dashboard />}>

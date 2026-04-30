@@ -77,7 +77,7 @@ export default function Creators() {
   }
 
   function getInviteLink(token: string) {
-    return `${window.location.origin}/join?token=${token}`;
+    return `${window.location.origin}/invite/${token}`;
   }
 
   async function copyLink(token: string) {
